@@ -17,17 +17,13 @@ import com.avit.platform.base.ISystem;
 import com.avit.platform.base.Shared;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FilenameFilter;
-import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Enumeration;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 public final class USBReceiver extends BroadcastReceiver {
 
@@ -41,7 +37,7 @@ public final class USBReceiver extends BroadcastReceiver {
 
     public final static ProxyRegister getRegister() {
         if (sInstance == null) {
-            synchronized (sInstance) {
+            synchronized (TAG) {
                 if (sInstance == null) {
                     sInstance = new ProxyRegister(new USBReceiver());
                 }
@@ -60,10 +56,11 @@ public final class USBReceiver extends BroadcastReceiver {
             this.mHandler = new MountHandler(this);
         }
 
+        String action = arg1.getAction();
         Log.v(TAG, "usb action = " + arg1.getAction());
 
-        if (arg1.getAction().equals(Intent.ACTION_MEDIA_MOUNTED) //
-                || arg1.getAction().equals(Intent.ACTION_MEDIA_CHECKING)) {
+        if (action.equals(Intent.ACTION_MEDIA_MOUNTED) //
+                || action.equals(Intent.ACTION_MEDIA_CHECKING)) {
 
             Message msg = Message.obtain(mHandler);
             String dir = arg1.getDataString();
@@ -76,103 +73,13 @@ public final class USBReceiver extends BroadcastReceiver {
             msg.what = 0x1000;
             msg.obj = dir;
             msg.sendToTarget();
+        } else if (action.equals(Intent.ACTION_MEDIA_UNMOUNTED)){
+            Collection<Class> valueSet = getRegister().configMap.values();
+            for (Class cls : valueSet){
+                editor.remove((cls.getName() + ".path").toUpperCase());
+            }
+            editor.commit();
         }
-    }
-
-
-    private boolean loadProperties2Shared(String path, Class cls) {
-
-        Properties properties = new Properties();
-
-        String configPath = (path + File.separator + cls.getName()).toLowerCase() + ".config";
-
-        FileInputStream fileInputStream = null;
-        try {
-            fileInputStream = new FileInputStream(configPath);
-            properties.load(fileInputStream);
-            Enumeration enumeration = properties.elements();
-
-            Log.d(TAG, "loadProperties2Shared: config path = " + configPath);
-
-            /**
-             * 加载所有的属性
-             */
-            boolean isNeedCommit = false;
-            while (enumeration.hasMoreElements()) {
-                String fieldName = (String) enumeration.nextElement();
-
-                /**
-                 * 寻找类中 与 属性 name 相同的 field
-                 */
-                Field field = null;
-                Class tmpCls = cls;
-                while (tmpCls != null && tmpCls != Object.class) {
-                    try {
-                        field = tmpCls.getDeclaredField(fieldName);
-                        break;
-                    } catch (NoSuchFieldException e) {
-                        Log.w(TAG, "saveSystemInfo: " + e);
-                    }
-
-                    tmpCls = tmpCls.getSuperclass();
-                }
-
-                /**
-                 * 如果没有找到，则 此属性 没有意义，不做处理
-                 */
-                if (field == null) {
-                    Log.w(TAG, "loadProperties2Shared: " + fieldName + " mismatch in class " + cls.getSimpleName());
-                    continue;
-                }
-
-                /**
-                 * 如果获取的属性值是空，则也无需保存，没有意义
-                 */
-                String value = properties.getProperty(fieldName);
-                if (TextUtils.isEmpty(value)) {
-                    Log.w(TAG, "loadProperties2Shared: " + fieldName + " value is nothing");
-                    continue;
-                }
-
-                String sharedKey = (cls.getName() + "." + field.getName()).toUpperCase();
-                editor.putString(sharedKey, value);
-                isNeedCommit = true;
-            }
-
-            if (isNeedCommit) {
-                /**
-                 * 如果 发现 对应的配置文件， 则 提交 存在路径，commit
-                 */
-                editor.putString((cls.getName() + ".path").toUpperCase(), configPath);
-                editor.commit();
-
-                /**
-                 * 通过 应用 可以重新读取 数据配置了
-                 */
-                List<ISystem.OnChangeListener> listeners = getRegister().classOnChangeListenerMap.get(cls);
-                if (listeners != null) {
-                    for (ISystem.OnChangeListener listener : listeners) {
-                        listener.onChange(null, cls);
-                    }
-                }
-            }
-
-            return true;
-
-        } catch (Throwable e) {
-            Log.e(TAG, "loadProperties2Shared: ", e);
-        } finally {
-            if (fileInputStream != null) {
-                try {
-                    fileInputStream.close();
-                } catch (IOException e) {
-                    Log.w(TAG, "loadProperties2Shared: " + e);
-                }
-            }
-            properties.clear();
-        }
-
-        return false;
     }
 
     public final static class ProxyRegister {
@@ -205,7 +112,7 @@ public final class USBReceiver extends BroadcastReceiver {
             return this;
         }
 
-        public void addReceiveClass(Class cls, ISystem.OnChangeListener... onChangeListeners) {
+        public void addReadClass(Class cls, ISystem.OnChangeListener... onChangeListeners) {
             if (cls == null) {
                 return;
             }
@@ -276,10 +183,12 @@ public final class USBReceiver extends BroadcastReceiver {
             }
 
             Log.d(TAG, "handleMessage: config size = " + names.length);
-
+            Map<Class, List<ISystem.OnChangeListener>> classOnChangeListenerMap = getRegister().classOnChangeListenerMap;
             for (String name : names) {
-                receiver.loadProperties2Shared(usbDir, configMap.get(name));
+                Class cls = configMap.get(name);
+                this.receiver.editor.putString((cls.getName() + ".path").toUpperCase(), usbDir + File.separator + name);
             }
+            this.receiver.editor.commit();
         }
     }
 }

@@ -37,6 +37,10 @@ public abstract class FileSystem extends AbstractSystem {
         this.context = context;
     }
 
+    public FileSystem(Context context) {
+        this.context = context;
+    }
+
     public Context getContext() {
         return context;
     }
@@ -54,7 +58,7 @@ public abstract class FileSystem extends AbstractSystem {
             inputStream = getInputStream();
             properties.load(inputStream);
         } catch (IOException e) {
-            Log.e(TAG, "onCheck: ", e);
+            Log.e(TAG, "onCheck: " + e);
             callback.onCallback(null);
             return this;
         } finally {
@@ -108,7 +112,7 @@ public abstract class FileSystem extends AbstractSystem {
 
         Uri fileUri = Uri.parse(filePath);
 
-        if (TextUtils.isEmpty(fileUri.getScheme())){
+        if (TextUtils.isEmpty(fileUri.getScheme())) {
             filePath = FILE_BASE + filePath;
         }
 

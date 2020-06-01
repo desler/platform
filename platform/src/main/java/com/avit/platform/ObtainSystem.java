@@ -3,7 +3,6 @@ package com.avit.platform;
 import android.util.Log;
 
 import com.avit.platform.backdoor.USBReceiver;
-import com.avit.platform.backdoor.USBSystem;
 import com.avit.platform.base.AbstractSystem;
 import com.avit.platform.base.DefaultSystem;
 import com.avit.platform.base.ISystem;
@@ -46,7 +45,7 @@ public final class ObtainSystem implements ISystem.Complete, ISystem.Error, ISys
 
     public ObtainSystem bindUSBReceiverRegister(USBReceiver.ProxyRegister register) {
         this.proxyRegister = register;
-        this.proxyRegister.addReceiveClass(systemInfoClass, this);
+        this.proxyRegister.addReadClass(systemInfoClass, this);
         return this;
     }
 

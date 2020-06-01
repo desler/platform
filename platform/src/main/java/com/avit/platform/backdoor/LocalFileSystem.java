@@ -7,11 +7,15 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public final class LocalFileSystem extends FileSystem {
+public class LocalFileSystem extends FileSystem {
 
     private final static String TAG = "LocalFileSystem";
     public LocalFileSystem(Context context, String filePath) {
         super(context, filePath);
+    }
+
+    public LocalFileSystem(Context context) {
+        super(context);
     }
 
     @Override
@@ -19,6 +23,6 @@ public final class LocalFileSystem extends FileSystem {
 
         String lp = filePath.substring(FileSystem.FILE_BASE.length());
 
-        return new FileInputStream(filePath + File.separator + systemInfoClass.getName().toLowerCase() + ".config");
+        return new FileInputStream(lp + File.separator + systemInfoClass.getName().toLowerCase() + ".config");
     }
 }

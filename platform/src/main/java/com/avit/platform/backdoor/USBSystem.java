@@ -3,22 +3,18 @@ package com.avit.platform.backdoor;
 import android.content.Context;
 import android.util.Log;
 
-import com.avit.platform.base.AbstractSystem;
 import com.avit.platform.base.ISystem;
 import com.avit.platform.base.Shared;
 
 import java.io.File;
-import java.lang.reflect.Field;
 
-public final class USBSystem extends AbstractSystem {
+public final class USBSystem extends LocalFileSystem {
 
     protected final static String TAG = "USBSystem";
-
-    private Context context;
     private Shared shared;
 
     public USBSystem(Context context) {
-        this.context = context;
+        super(context);
     }
 
     @Override
@@ -29,14 +25,14 @@ public final class USBSystem extends AbstractSystem {
     @Override
     protected ISystem onCheck(ISystem.Callback callback) {
         if (this.shared == null) {
-            shared = Shared.getInstance(context);
+            shared = Shared.getInstance(getContext());
         }
-
         String cfgPath = shared.shared.getString((systemInfoClass.getName() + ".path").toUpperCase(), "AVIT.CFG.INVALID.PATH");
 
         File cfgF = new File(cfgPath);
         if (cfgF.exists()) {
-            Log.d(TAG, "config ==>" + cfgPath);
+            filePath = FileSystem.FILE_BASE + cfgPath.substring(0, cfgPath.lastIndexOf(File.separator));
+            Log.d(TAG, "config ==>" + filePath);
             return super.onCheck(callback);
         }
 
@@ -45,30 +41,12 @@ public final class USBSystem extends AbstractSystem {
         return this;
     }
 
-    @Override
-    protected Object onFetchValue(Field field) {
-        String usbName = (systemInfoClass.getName() + "." + field.getName()).toUpperCase();
-        return shared.shared.getString(usbName, "");
-    }
-
     private void clear(Shared shared) {
 
         Class cls = systemInfoClass;
-
-        while (cls != null) {
-            Field[] fields = cls.getDeclaredFields();
-
-            for (Field f : fields) {
-                String usbName = (systemInfoClass.getName() + "." + f.getName()).toUpperCase();
-                shared.editor.remove(usbName);
-            }
-
-            cls = cls.getSuperclass();
-        }
-        shared.editor.remove((systemInfoClass.getName() + ".path").toUpperCase());
+        shared.editor.remove((cls.getName() + ".path").toUpperCase());
 
         Log.w(TAG, "clear: ");
-
         shared.editor.commit();
     }
 }
