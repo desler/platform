@@ -1,5 +1,6 @@
 package com.avit.platform.backdoor;
 
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.avit.platform.base.AbstractSystem;
@@ -15,6 +16,8 @@ public final class PropertiesSystem extends AbstractSystem {
 
     protected final static String TAG = "PropertiesSystem";
 
+    private String propPrefix;
+
     @Override
     public boolean isInit() {
         return true;
@@ -23,14 +26,9 @@ public final class PropertiesSystem extends AbstractSystem {
     @Override
     protected Object onFetchValue(Field field) {
 
-        String clsName = systemInfoClass.getName();
-        String propPrefix = clsName;
-        /**
-         * 此处之所以要对 class 全路径 进行裁剪，是因为 android 属性系统，中 name的最大长度为 31.
-         */
-        String[] subs = clsName.split(".");
-        if (subs.length > 2) {
-            propPrefix = subs[subs.length - 2] + "." + subs[subs.length - 1];
+        if (TextUtils.isEmpty(propPrefix)) {
+            this.propPrefix = ("avit." + systemInfoClass.getSimpleName()).toLowerCase();
+//            Log.d(TAG, "onFetchValue: prefix --> " + propPrefix);
         }
 
         String propName = (propPrefix + "." + field.getName()).toLowerCase();
@@ -39,6 +37,8 @@ public final class PropertiesSystem extends AbstractSystem {
             Log.e(TAG, "fillSystemInfo: field " + field.getName() + " too long, never over " + ol);
             return null;
         }
+
+//        Log.d(TAG, "onFetchValue: propName = " + propName);
 
         return Utils.getSystemProperties(propName);
     }

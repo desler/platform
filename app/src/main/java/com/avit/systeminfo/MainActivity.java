@@ -3,6 +3,7 @@ package com.avit.systeminfo;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+import android.util.Log;
 
 import com.avit.platform.ObtainSystem;
 import com.avit.platform.SystemInfo;
@@ -21,6 +22,14 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        USBReceiver.ProxyRegister proxyRegister = USBReceiver.getRegister().register(this);
+        proxyRegister.addReadClass(SystemInfo.class, new ISystem.OnChangeListener() {
+            @Override
+            public void onChange(ISystem system, Class cfgClass) {
+                Log.d(system + "", "onChange: " + cfgClass);
+            }
+        });
+
         final ObtainSystem system = ObtainSystem.getInstance(SystemInfo.class);
         system.addSystem(new AMGSystem())// 厂家自定义 system 相关参数
                 /**
@@ -34,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
                 /**
                  * 从 USB 存储 读取相应参数
                  */
-                .bindUSBReceiverRegister(USBReceiver.getRegister().register(this))
+                .bindUSBReceiverRegister(proxyRegister)
                 .addSystem(new USBSystem(this))//backdoor from USB
                 /**
                  * 从文件读取
@@ -65,5 +74,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void initSystemConfig(SystemInfo value) {
 
+        if (value == null)
+            return ;
+
+        Log.d("MainActivity", "initSystemConfig: hardwareVersion = " + value.hardwareVersion);
+        Log.d("MainActivity", "initSystemConfig: manuCode = " + value.manuCode);
     }
 }
